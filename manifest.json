@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "AI Text Corrector",
+  "version": "1.0.0",
+  "description": "Fix and improve text using AI with hotkeys",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AI Text Corrector"
+  },
+  "commands": {
+    "fix-text": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+F"
+      },
+      "description": "Fix selected text with AI"
+    }
+  }
+}
