@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Page for AI Text Corrector Extension</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+    .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    .test-text { background: #f9f9f9; padding: 10px; margin: 10px 0; border-left: 3px solid #007cba; }
+    textarea { width: 100%; height: 100px; margin: 10px 0; }
+    .editable { border: 1px solid #ccc; padding: 10px; margin: 10px 0; min-height: 50px; }
+    .instructions { background: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>AI Text Corrector Extension Test Page</h1>
+  
+  <div class="instructions">
+    <strong>Instructions:</strong>
+    <ol>
+      <li>Make sure the AI Text Corrector extension is loaded in Chrome</li>
+      <li>Select any text below</li>
+      <li>Press <strong>Ctrl+Shift+F</strong></li>
+      <li>Watch the text get corrected by AI!</li>
+    </ol>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 1: Regular Text (Read-only)</h3>
+    <div class="test-text">
+      hello word, how are you today? i hope your doing well. this text has some erors that need fixing.
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 2: Textarea (Editable)</h3>
+    <textarea placeholder="Type or paste text here to test...">hello word, how are you today? i hope your doing well. this text has some erors that need fixing.</textarea>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 3: ContentEditable Div</h3>
+    <div class="editable" contenteditable="true">
+      hello word, how are you today? i hope your doing well. this text has some erors that need fixing.
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 4: Input Field</h3>
+    <input type="text" style="width: 100%;" value="hello word, how are you today? i hope your doing well." />
+  </div>
+
+  <div class="test-section">
+    <h3>Test 5: Russian Text (Original Language)</h3>
+    <div class="test-text">
+      привет, как дела сегодня? я хочу исправить этот тект через ии. надеюсь все получится хорошо.
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h3>Test 6: Mixed Content</h3>
+    <div class="test-text">
+      This is a test mesage with some speling mistakes and gramar erors. Can the AI fix this tekst properly? lets see what hapens!
+    </div>
+  </div>
+
+  <script>
+    // Add some dynamic feedback
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Test page loaded. Extension should be active.');
+      console.log('Select text and press Ctrl+Shift+F to test the extension.');
+    });
+
+    // Monitor for text selection
+    document.addEventListener('selectionchange', () => {
+      const selection = window.getSelection().toString();
+      if (selection.trim()) {
+        console.log('Text selected:', selection.substring(0, 50) + (selection.length > 50 ? '...' : ''));
+      }
+    });
+  </script>
+</body>
+</html>

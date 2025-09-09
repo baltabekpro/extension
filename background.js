@@ -35,15 +35,43 @@ chrome.commands.onCommand.addListener(async (command) => {
         return;
       }
       
+      // Show processing notification
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        function: showNotification,
+        args: ['Processing text with AI...', 'info']
+      });
+      
       // Get corrected text from AI
       const correctedText = await correctTextWithAI(selectedText);
       
-      if (correctedText) {
+      if (correctedText && correctedText !== selectedText) {
         // Replace selected text with corrected text
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           function: replaceSelectedText,
           args: [correctedText]
+        });
+        
+        // Show success notification
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: showNotification,
+          args: ['Text corrected successfully!', 'success']
+        });
+      } else if (correctedText === selectedText) {
+        // Text was already correct
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: showNotification,
+          args: ['Text looks good already!', 'info']
+        });
+      } else {
+        // API failed
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: showNotification,
+          args: ['Failed to correct text. Please try again.', 'error']
         });
       }
     } catch (error) {
@@ -66,6 +94,59 @@ function replaceSelectedText(newText) {
     range.insertNode(document.createTextNode(newText));
     selection.removeAllRanges();
   }
+}
+
+// Function to inject notification function into page
+function showNotification(message, type = 'info') {
+  // Remove existing notification
+  const existingNotification = document.getElementById('ai-text-corrector-notification');
+  if (existingNotification) {
+    existingNotification.remove();
+  }
+  
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.id = 'ai-text-corrector-notification';
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+    color: white;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    z-index: 10000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    max-width: 300px;
+    word-wrap: break-word;
+    animation: slideIn 0.3s ease-out;
+  `;
+  
+  // Add animation keyframes
+  if (!document.getElementById('ai-corrector-styles')) {
+    const style = document.createElement('style');
+    style.id = 'ai-corrector-styles';
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  // Auto remove after 3 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.style.animation = 'slideIn 0.3s ease-out reverse';
+      setTimeout(() => notification.remove(), 300);
+    }
+  }, 3000);
 }
 
 // Correct text using Gemini AI with key rotation
