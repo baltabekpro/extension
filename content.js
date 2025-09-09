@@ -9,6 +9,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'replaceSelectedText') {
     replaceSelectedText(request.newText);
     sendResponse({ success: true });
+  } else if (request.action === 'showNotification') {
+    showNotification(request.message || '', request.type || 'info');
+    sendResponse({ success: true });
   }
 });
 
