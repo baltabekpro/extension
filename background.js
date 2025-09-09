@@ -1,19 +1,24 @@
-// Gemini API keys with rotation support
-const API_KEYS = [
-  'AIzaSyClo-DqTkK3WgI1clFzzB9kgrxUI2WPBfQ',
-  'AIzaSyAki3gbqQCfiUCa61i-a4f_hvTrfgXncOY',
-  'AIzaSyCWeNr4ime4BPeeA3aXlSxLHEEE-rL2pgI'
-];
-
+// Gemini API keys are stored in chrome.storage.sync under 'apiKeys'
 let currentKeyIndex = 0;
 
 // Initialize storage
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.set({
+chrome.runtime.onInstalled.addListener(async () => {
+  await chrome.storage.sync.set({
     currentKeyIndex: 0,
     totalRequests: 0,
     successfulRequests: 0
   });
+  const existing = await chrome.storage.sync.get(['apiKeys']);
+  if (!Array.isArray(existing.apiKeys)) {
+    await chrome.storage.sync.set({ apiKeys: [] });
+  }
+  // Try to auto-import keys from config.json if present
+  await importKeysFromConfig();
+});
+
+// Also attempt on browser startup
+chrome.runtime.onStartup?.addListener(async () => {
+  await importKeysFromConfig();
 });
 
 // Handle keyboard shortcut
@@ -23,6 +28,13 @@ chrome.commands.onCommand.addListener(async (command) => {
     if (!tab || !tab.id) return;
 
     try {
+      // Ensure API keys are present
+      const API_KEYS = await getApiKeys();
+      if (!API_KEYS.length) {
+        await chrome.tabs.sendMessage(tab.id, { action: 'showNotification', message: 'Добавьте API‑ключ Gemini (см. README) — ключи не найдены', type: 'error' });
+        return;
+      }
+
       // Ask content script for selected text
       const selectedResp = await chrome.tabs.sendMessage(tab.id, { action: 'getSelectedText' });
       const selectedText = selectedResp?.text || '';
@@ -36,7 +48,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       await chrome.tabs.sendMessage(tab.id, { action: 'showNotification', message: 'Обрабатываю текст с помощью ИИ…', type: 'info' });
 
       // Get corrected text from AI
-      const correctedText = await correctTextWithAI(selectedText);
+  const correctedText = await correctTextWithAI(selectedText);
 
       if (correctedText) {
         // Replace selected text with corrected text
@@ -45,7 +57,7 @@ chrome.commands.onCommand.addListener(async (command) => {
       } else {
         await chrome.tabs.sendMessage(tab.id, { action: 'showNotification', message: 'Не удалось исправить текст. Попробуйте ещё раз.', type: 'error' });
       }
-    } catch (error) {
+  } catch (error) {
       console.error('Error processing text correction:', error);
       try {
         await chrome.tabs.sendMessage(tab.id, { action: 'showNotification', message: 'Произошла ошибка при обработке текста', type: 'error' });
@@ -65,6 +77,17 @@ async function correctTextWithAI(text) {
   - If no changes are required, output the text EXACTLY as received.
 
 ${text}`;
+
+  const API_KEYS = await getApiKeys();
+  if (!API_KEYS.length) {
+    // One more attempt to import from config.json
+    await importKeysFromConfig();
+    const retryKeys = await getApiKeys();
+    if (retryKeys.length) {
+      return await correctTextWithAI(text);
+    }
+    return null;
+  }
 
   for (let attempt = 0; attempt < API_KEYS.length; attempt++) {
     try {
@@ -103,14 +126,14 @@ ${text}`;
       } else if (response.status === 429 || response.status === 403) {
         // Rate limit or quota exceeded, try next key
         console.log(`API key ${currentKeyIndex} exhausted, switching to next key`);
-        await switchToNextKey();
+        await switchToNextKey(API_KEYS.length);
       } else {
         throw new Error(`API request failed: ${response.status}`);
       }
     } catch (error) {
       console.error(`Error with API key ${currentKeyIndex}:`, error);
       if (attempt < API_KEYS.length - 1) {
-        await switchToNextKey();
+        await switchToNextKey(API_KEYS.length);
       }
     }
   }
@@ -122,8 +145,9 @@ ${text}`;
 }
 
 // Switch to next API key
-async function switchToNextKey() {
-  currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+async function switchToNextKey(keysLength) {
+  const len = typeof keysLength === 'number' && keysLength > 0 ? keysLength : 1;
+  currentKeyIndex = (currentKeyIndex + 1) % len;
   await chrome.storage.sync.set({ currentKeyIndex });
 }
 
@@ -188,4 +212,32 @@ function cleanModelOutput(original, output) {
 
 function normalize(s) {
   return String(s).trim().replace(/\s+/g, ' ');
+}
+
+async function getApiKeys() {
+  const { apiKeys } = await chrome.storage.sync.get(['apiKeys']);
+  if (Array.isArray(apiKeys)) {
+    return apiKeys.filter(Boolean).map(String);
+  }
+  return [];
+}
+
+// Import keys from a local config.json packaged with the extension, if available
+async function importKeysFromConfig() {
+  try {
+    const { apiKeys: existing } = await chrome.storage.sync.get(['apiKeys']);
+    if (Array.isArray(existing) && existing.length > 0) return; // already set
+
+    const url = chrome.runtime.getURL('config.json');
+    const resp = await fetch(url);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const keys = Array.isArray(data?.apiKeys) ? data.apiKeys.filter(Boolean).map(String) : [];
+    if (keys.length > 0) {
+      await chrome.storage.sync.set({ apiKeys: keys, currentKeyIndex: 0 });
+      console.log('Imported API keys from config.json');
+    }
+  } catch (e) {
+    // Silently ignore if file not found or invalid
+  }
 }

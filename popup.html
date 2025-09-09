@@ -131,6 +131,20 @@
   </div>
   
   <div class="section">
+    <label class="label">API ключи Gemini:</label>
+    <div id="keysContainer"></div>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <input id="newKey" type="text" placeholder="Вставьте API ключ" style="flex:1; padding:8px; border:1px solid #dadce0; border-radius:4px;">
+      <button id="addKeyBtn" style="padding:8px 12px;">Добавить</button>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button id="saveKeysBtn" style="flex:1; padding:8px 12px;">Сохранить ключи</button>
+      <button id="clearKeysBtn" style="padding:8px 12px;">Очистить</button>
+    </div>
+    <div id="keysHint" style="font-size:12px; color:#5f6368; margin-top:6px;">Ключи хранятся локально в вашем профиле Chrome.</div>
+  </div>
+
+  <div class="section">
     <label class="label">Usage Statistics:</label>
     <div class="stats">
       <div class="stat">
